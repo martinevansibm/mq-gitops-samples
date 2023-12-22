@@ -1,0 +1,51 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: build-mq-container
+  namespace: default
+spec:
+  params:
+    - default: 'mq:latest'
+      name: mqSrcImage
+      type: string
+  steps:
+    - image: registry.redhat.io/ubi8/podman
+      name: build-mq-prometheus-image
+      resources: {}
+      script: >
+
+        export image=$(params.mqSrcImage)
+
+        cd /workspace/output
+
+        cat >Dockerfile <<EOF
+
+        FROM cp.icr.io/cp/ibm-mqadvanced-server-integration:9.3.3.1-r1
+
+        USER 0
+
+        RUN mkdir -p /opt/mqm/metrics
+
+        COPY bin/mq_prometheus /usr/local/bin/mqgo/mq_prometheus
+
+        RUN chmod 777 /usr/local/bin/mqgo/mq_prometheus
+
+        COPY cmd/mq_prometheus/mq_prometheus.sh /opt/mqm/metrics
+
+        RUN chmod 777 /opt/mqm/metrics/*
+
+        USER 1001
+
+        EOF
+
+        podman build . -t ibm.com.mq:1.0
+
+        podman push localhost/ibm.com.mq:1.0 image-registry.openshift-image-registry.svc:5000/mq-demo/mq-prometheus:1.0.3
+      securityContext:
+        privileged: true
+  workspaces:
+    - description: The workspace
+      name: output
+    - description: Docker config from secret
+      name: dockerconfig
+

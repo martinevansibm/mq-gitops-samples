@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dev
+  namespace: openshift-gitops
+spec:
+  destination:
+    name: ''
+    namespace: mq-demo
+    server: 'https://kubernetes.default.svc'
+  source:
+    path: queue-manager-deployment/queue-managers
+    repoURL: 'https://github.com/martinevansibm/mq-gitops-samples'
+    targetRevision: main
+  project: default

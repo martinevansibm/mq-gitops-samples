@@ -1,0 +1,8 @@
+piVersion: mq.ibm.com/v1beta1
+kind: QueueManager
+metadata:
+  name: ibm-mq
+spec:
+  queueManager:
+    metrics:
+      enabled: false

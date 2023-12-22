@@ -1,0 +1,107 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: build-metrics
+  namespace: default
+spec:
+  params:
+    - default: 9.3.3.0
+      name: mqVersion
+      type: string
+    - default: mq_prometheus
+      name: exporter
+      type: string
+  steps:
+    - image: registry.redhat.io/ubi8/ubi
+      name: build-mq-prometheus-exporter
+      resources: {}
+      script: >
+
+        export EXPORTER=$(params.exporter) \
+
+        ORG="github.com/ibm-messaging" \
+
+        REPO="mq-metric-samples" \
+
+        VRMF=$(params.mqVersion) \
+
+        CGO_CFLAGS="-I/opt/mqm/inc/" \
+
+        CGO_LDFLAGS_ALLOW="-Wl,-rpath.*" \
+
+        genmqpkg_incnls=1 \
+
+        genmqpkg_incsdk=1 \
+
+        genmqpkg_inctls=1
+
+
+        # Install packages
+
+        dnf --disableplugin=subscription-manager -y -q install go-toolset
+
+
+        # Create directory structure
+
+        mkdir -p /go/src /go/bin /go/pkg \
+
+        && chmod -R 777 /go \
+
+        && mkdir -p /go/src/$ORG \
+
+        && mkdir -p /opt/mqm \
+
+        && chmod a+rx /opt/mqm
+
+
+        # Install MQ client and SDK
+
+        # For platforms with a Redistributable client, we can use curl to pull
+        it in and unpack it.
+
+        #
+
+        echo "Installing MQ client"
+
+        echo "--------------------"
+
+        export MQARCH=X64;\
+
+        RDURL="https://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/messaging/mqdev/redist";\
+
+        RDTAR="IBM-MQC-Redist-Linux${MQARCH}.tar.gz"; \
+
+        cd /opt/mqm \
+
+        && curl -s -LO "$RDURL/$VRMF-$RDTAR" \
+
+        && tar -zxf ./*.tar.gz \
+
+        && rm -f ./*.tar.gz \
+
+        && bin/genmqpkg.sh -b /opt/mqm;\
+
+
+        # Build Go application
+
+        echo "Building go application"
+
+        echo "-----------------------"
+
+        export WORKDIR="/go/src/$ORG/$REPO"
+
+        cd /workspace/output/cmd/mq_prometheus
+
+        go build -mod=vendor -o /go/bin/${EXPORTER} ./*.go
+
+        mkdir -p /workspace/output/bin
+
+        cp /go/bin/${EXPORTER} /workspace/output/bin
+
+        ls -lrt /workspace/output/bin
+
+        echo "Finished building MQ Prometheus exporter"
+  workspaces:
+    - description: The workspace
+      name: output
+
