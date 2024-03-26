@@ -9,7 +9,7 @@ spec:
 #      runAsUser: 65532
   params:
     - name: mqVersion
-      value: 9.3.3.1-r1
+      value: 9.3.4.1-r1
     - name: mqSrcImage
       value: icr.io/ibm-messaging/mq
     - name: targetRegistry
